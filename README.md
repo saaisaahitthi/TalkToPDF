@@ -1,4 +1,4 @@
-# 🧠 DocuChat AI
+# 🧠 TalkToPDF
 
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![Express.js](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge)
@@ -7,9 +7,9 @@
 ![Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?style=for-the-badge&logo=googlebard&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 
-**DocuChat AI** is an advanced, production-ready full-stack **Retrieval-Augmented Generation (RAG)** application. It completely redefines how users interact with dense information by transforming static, multi-page PDF documents into interactive, conversational AI assistants. 
+**TalkToPDF** is an advanced, production-ready full-stack **Retrieval-Augmented Generation (RAG)** application. It completely redefines how users interact with dense information by transforming static, multi-page PDF documents into interactive, conversational AI assistants. 
 
-By heavily leveraging Google Gemini for both Large Language Model (LLM) generation and high-dimensional Text Embeddings, alongside MongoDB Atlas Vector Search and Redis for distributed queuing and caching, DocuChat AI provides a fast, highly accurate, and grounded answering system.
+By heavily leveraging Google Gemini for both Large Language Model (LLM) generation and high-dimensional Text Embeddings, alongside MongoDB Atlas Vector Search and Redis for distributed queuing and caching, TalkToPDF provides a fast, highly accurate, and grounded answering system.
 
 ---
 
@@ -47,7 +47,7 @@ The architecture is strictly decoupled into a fast API Gateway layer and an asyn
 ## 📂 Project Structure
 
 ```text
-DocuChat-AI/
+TalkToPDF/
 ├── backend/
 │   ├── server.js               # Express API Entry Point
 │   └── src/
@@ -83,8 +83,8 @@ Ensure you have the following installed and configured:
 Clone the repository and install the dependencies for both layers.
 
 ```bash
-git clone https://github.com/saaisaahitthi/DocuChat-AI.git
-cd DocuChat-AI
+git clone https://github.com/saaisaahitthi/TalkToPDF.git
+cd TalkToPDF
 
 # Install Backend
 cd backend
