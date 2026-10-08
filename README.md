@@ -1,4 +1,4 @@
-# 🧠 DocuChat AI (formerly TalkToPDF)
+# 🧠 DocuChat AI
 
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![Express.js](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge)
@@ -7,67 +7,96 @@
 ![Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?style=for-the-badge&logo=googlebard&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 
-**DocuChat AI** is a powerful, full-stack Retrieval-Augmented Generation (RAG) application that transforms static PDF documents into interactive, conversational AI assistants. By leveraging Google Gemini, MongoDB Vector Search, and Redis, it allows users to intuitively "talk" to their documents and retrieve highly accurate, context-aware answers.
+**DocuChat AI** is an advanced, production-ready full-stack **Retrieval-Augmented Generation (RAG)** application. It completely redefines how users interact with dense information by transforming static, multi-page PDF documents into interactive, conversational AI assistants. 
+
+By heavily leveraging Google Gemini for both Large Language Model (LLM) generation and high-dimensional Text Embeddings, alongside MongoDB Atlas Vector Search and Redis for distributed queuing and caching, DocuChat AI provides a fast, highly accurate, and grounded answering system.
 
 ---
 
-## ✨ Features
+## ✨ Core Features
 
-- **📄 Smart Document Ingestion**: Upload any PDF document to securely extract, clean, and process the text content.
-- **🧠 Semantic Vector Search**: Text is split into meaningful chunks and embedded into high-dimensional vector embeddings, which are then queried for semantic relevance.
-- **💬 Conversational AI**: Ask questions in natural language and receive grounded, accurate answers directly sourced from the document, powered by Google's Gemini AI.
-- **⚡ Real-time Streaming**: Enjoy a ChatGPT-like experience with Server-Sent Events (SSE) streaming responses in real-time.
-- **⏳ Background Processing**: Heavy tasks like text parsing, chunking, and embedding generation are offloaded to asynchronous background workers to ensure the main API remains fast and responsive.
-- **📚 Persistent Chat History**: Conversations are seamlessly stored and managed per session using Redis.
+- **📄 Smart Document Ingestion Pipeline**: Upload any complex PDF document. The backend securely extracts the text, sanitizes it, and prepares it for processing.
+- **🧠 Advanced Semantic Vector Search**: The application splits extracted text into semantically cohesive, overlapping chunks. These chunks are embedded into 768-dimensional vector representations and indexed in MongoDB Atlas, allowing the AI to perfectly retrieve information based on meaning rather than mere keyword matching.
+- **💬 Conversational AI & Context Awareness**: Ask questions in natural English and receive highly accurate, grounded answers. The AI strictly answers based *only* on the contents of the uploaded document, preventing hallucinations.
+- **⚡ Real-time SSE Streaming**: To provide a seamless "ChatGPT-like" UX, the backend streams the AI's response token-by-token directly to the React frontend using Server-Sent Events (SSE).
+- **⏳ Asynchronous Background Processing**: Heavy analytical tasks (PDF parsing, chunking algorithms, AI embedding generation) are decoupled from the main thread. A dedicated Redis-backed Worker processes these jobs to ensure the main API remains lighting fast and highly available.
+- **📚 Persistent Chat History**: Conversations are persistently stored in a Redis cache managed per user session, providing the AI with conversational memory (e.g. "Can you elaborate on your previous point?").
+- **🛡️ Built-in Rate Limiting**: Ensures fair usage and API protection via Redis-backed rate limiters.
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## 🏗️ Architecture & Component Breakdown
 
-**Flow of Execution:**
-1. **Upload**: User uploads a PDF via the React frontend.
-2. **Acceptance**: Express API receives the file, storing metadata in MongoDB.
-3. **Queuing**: A background job is dispatched to a Redis queue.
-4. **Worker Processing**: The worker parses the PDF, chunks the text, invokes Gemini to generate embeddings, and saves them in MongoDB Atlas.
-5. **Querying**: User asks a question about the document.
-6. **Retrieval**: MongoDB Vector Search retrieves the most semantically relevant text chunks.
-7. **Generation**: Gemini generates a grounded response using the retrieved chunks and streams it back to the client.
+The architecture is strictly decoupled into a fast API Gateway layer and an asynchronous Worker layer.
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Frontend** | React + Vite | Fast, responsive User Interface |
-| **Backend** | Node.js + Express | Robust REST API and Server-Sent Events |
-| **Database** | MongoDB Atlas | Storage for document metadata and Vector Embeddings |
-| **Queue / Cache** | Redis | Job queuing and transient Chat History storage |
-| **AI Engine** | Google Gemini APIs | Text Embeddings & Large Language Model (LLM) generation |
-| **File Handling** | Multer + pdf-parse | Multipart uploads and raw text extraction |
+### System Workflow
+1. **Upload Phase**: The user uploads a PDF via the React frontend.
+2. **Acceptance**: The Express API safely receives the multipart-form data, temporarily stores the file, creates a document metadata entry in MongoDB, and dispatches a background job to a Redis message queue.
+3. **Worker Processing**:
+   - **Text Extraction**: The worker uses `pdf-parse` to strip out all text.
+   - **Chunking**: The text is passed through an algorithmic chunker that splits it into optimized paragraphs (e.g., 1000 characters) with a defined overlap (e.g., 200 characters) to ensure no context is lost at the boundaries.
+   - **Embedding**: Batches of chunks are sent to the Google Gemini Embedding API (`text-embedding-004`).
+   - **Indexing**: The resulting vectors are securely inserted into MongoDB Atlas.
+4. **Query Phase**: The user submits a natural language question.
+5. **Retrieval**: The user's question is embedded into a vector. MongoDB Vector Search (`$vectorSearch`) computes the cosine similarity against all document chunks and returns the top `K` most relevant chunks.
+6. **Generation**: A carefully crafted prompt, containing the user's question and the retrieved chunks, is sent to the Gemini LLM.
+7. **Streaming**: Gemini streams the response, which is piped through the Express API directly to the user's screen.
+
+---
+
+## 📂 Project Structure
+
+```text
+DocuChat-AI/
+├── backend/
+│   ├── server.js               # Express API Entry Point
+│   └── src/
+│       ├── runWorker.js        # Redis Worker Entry Point
+│       ├── config/             # DB, Redis, and Gemini initializers
+│       ├── controllers/        # Route logic and request handling
+│       ├── middlewares/        # Rate limiting, file uploads, error catching
+│       ├── models/             # Mongoose schemas (Documents, Chunks)
+│       ├── routes/             # API endpoint definitions
+│       ├── services/           # Business logic (LLM, Embeddings, PDF, Retrieval)
+│       ├── utils/              # Standardized API Responses and Error classes
+│       └── worker/             # Ingestion job processing logic
+└── frontend/
+    ├── vite.config.js
+    └── src/
+        ├── App.jsx             # Main Application View
+        ├── components/         # ChatBox, Sidebar, UploadArea UI components
+        └── utils/              # API clients and Server-Sent Event (SSE) parsers
+```
 
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-Ensure you have the following installed and set up:
+Ensure you have the following installed and configured:
 - **Node.js** (v20 or higher recommended)
-- **MongoDB Atlas** account (for database and vector search capabilities)
-- **Redis** server (running locally or remotely)
-- **Google Gemini API Key** (Get one from Google AI Studio)
+- **MongoDB Atlas** account (Must be Atlas for Vector Search capabilities)
+- **Redis** server (Running locally via Docker or a cloud instance)
+- **Google Gemini API Key** (Obtain from Google AI Studio)
 
 ### 2. Installation
-Clone the repository and install dependencies for both frontend and backend.
+Clone the repository and install the dependencies for both layers.
 
 ```bash
-# Install backend dependencies
+git clone https://github.com/saaisaahitthi/DocuChat-AI.git
+cd DocuChat-AI
+
+# Install Backend
 cd backend
 npm install
 
-# Install frontend dependencies
+# Install Frontend
 cd ../frontend
 npm install
 ```
 
 ### 3. Environment Variables Setup
-In the `backend` directory, create a `.env` file and populate it with your credentials:
+In the `backend` directory, create a `.env` file and populate it:
 
 ```env
 PORT=8000
@@ -76,13 +105,12 @@ REDIS_URL=redis://localhost:6379
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-### 4. MongoDB Vector Search Configuration
-To enable the semantic search capabilities, you must create a Vector Search Index in MongoDB Atlas.
-
-1. Go to your MongoDB Atlas dashboard -> **Search** -> **Create Search Index**.
-2. Select **JSON Editor**.
-3. Target the `chunks` collection.
-4. Name the index `vector_index`.
+### 4. Configure MongoDB Atlas Vector Search Index
+This is a critical step. The semantic search will fail without an explicit index.
+1. Go to your MongoDB Atlas Dashboard -> **Atlas Search**.
+2. Click **Create Search Index** -> **JSON Editor**.
+3. Select your Database and the `chunks` collection.
+4. Name the index `vector_index` (it must match exactly).
 5. Paste the following configuration:
 
 ```json
@@ -102,58 +130,62 @@ To enable the semantic search capabilities, you must create a Vector Search Inde
 }
 ```
 
-### 5. Running the Application
+### 5. Running the Application Locally
+You will need three separate terminal windows to run the microservices locally.
 
-You will need three terminal windows to run all services simultaneously.
-
-**Terminal 1: Start the Backend API**
+**Terminal 1: Start the Backend API Gateway**
 ```bash
 cd backend
 npm run dev
 ```
 
-**Terminal 2: Start the Background Worker**
+**Terminal 2: Start the Background Ingestion Worker**
 ```bash
 cd backend
 node --env-file=.env src/runWorker.js
 ```
 
-**Terminal 3: Start the Frontend UI**
+**Terminal 3: Start the React Frontend**
 ```bash
 cd frontend
 npm run dev
 ```
 
-The application UI will be accessible at `http://localhost:5173`.
+Visit `http://localhost:5173` in your browser to start interacting!
 
 ---
 
-## 🌐 API Reference
+## 🌐 Complete API Reference
 
-### Document Management
+### Document Management (`/api/documents`)
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/documents/upload` | Upload a new PDF and queue ingestion |
-| `GET` | `/api/documents` | Retrieve a list of all processed documents |
-| `GET` | `/api/documents/:id` | Fetch details of a specific document |
-| `DELETE` | `/api/documents/:id` | Remove a document and its associated vector chunks |
+| `POST` | `/upload` | Multipart upload for a new PDF; triggers the background ingestion job. |
+| `GET` | `/` | Retrieves metadata for all previously processed documents. |
+| `GET` | `/:id` | Fetches details and ingestion status of a specific document. |
+| `DELETE` | `/:id` | Cascading delete; removes the document metadata and all associated vector chunks. |
 
-### Chat Interface
+### Conversational AI (`/api/chat`)
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/chat/ask` | Submit a question and receive a streamed AI response |
-| `GET` | `/api/chat/history/:sessionId` | Fetch the chat history for a given session |
-| `DELETE`| `/api/chat/history/:sessionId` | Clear the chat history for a session |
+| `POST` | `/ask` | Submit a prompt. Returns a `text/event-stream` (SSE) of the generated AI answer. |
+| `GET` | `/history/:sessionId` | Retrieves the Redis-cached chat memory for the given session. |
+| `DELETE`| `/history/:sessionId` | Flushes the session memory from Redis. |
 
-### Job Monitoring
+### Background Jobs (`/api/job`)
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/job/:jobId` | Poll the status of a background ingestion job |
+| `GET` | `/:jobId` | Poll this endpoint to get real-time status updates on PDF processing. |
 
 ---
 
-## 🤝 Contributing
-Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
+## 🛠️ Troubleshooting
+
+- **No answers returned / Similarity Search Fails**: Ensure your MongoDB Vector Index is named exactly `vector_index` and that it has finished building in the Atlas dashboard.
+- **Worker Crashes on Upload**: Ensure your local Redis instance is running (`redis-cli ping` should return `PONG`).
+- **Gemini API Errors**: Verify your API key has enough quota and is authorized for `gemini-1.5-flash` and `text-embedding-004` models.
+
+---
 
 ## 📜 License
-This project is licensed under the MIT License. Use it for learning, modifying, and building your own RAG applications!
+This software is provided under the MIT License. Feel free to use, modify, and build your own highly capable RAG pipelines!
