@@ -4,6 +4,7 @@ import { generateEmbeddings } from "../services/embedding.service.js";
 import { parsePDF } from "../services/pdf.service.js";
 import { Document } from "../models/document.model.js";
 import { Chunk } from "../models/chunks.model.js";
+import fs from "fs/promises";
 
 export const startWorker = async () => {
   while (true) {
@@ -11,14 +12,12 @@ export const startWorker = async () => {
 
     if (!data) continue;
 
-    let documentId, jobId;
+    let documentId, jobId, filePath;
     try {
-      // console.log(data);
-
       const parsedData = JSON.parse(data[1]);
       documentId = parsedData.documentId;
       jobId = parsedData.jobId;
-      const { filePath } = parsedData;
+      filePath = parsedData.filePath;
 
       await redis.hset(`job:${jobId}`, "status", "parsing");
 
@@ -50,8 +49,10 @@ export const startWorker = async () => {
       await Chunk.insertMany(chunksData);
 
       await redis.hset(`job:${jobId}`, "status", "completed");
+      // Evict job status from Redis after 24 hours to save memory
+      await redis.expire(`job:${jobId}`, 86400);
 
-      const document = await Document.findByIdAndUpdate(documentId, {
+      await Document.findByIdAndUpdate(documentId, {
         status: "ready",
         pageCount: totalPages,
         chunkCount: chunks.length,
@@ -61,13 +62,24 @@ export const startWorker = async () => {
       console.log("Error with worker:", error);
 
       if (documentId) {
-        const document = await Document.findByIdAndUpdate(documentId, {
+        await Document.findByIdAndUpdate(documentId, {
           status: "failed",
           errorMessage: error.message || "Worker processing failed",
         });
       }
       if (jobId) {
         await redis.hset(`job:${jobId}`, "status", "failed");
+        // Also evict failed jobs after 24 hours
+        await redis.expire(`job:${jobId}`, 86400);
+      }
+    } finally {
+      // Free up disk space capacity by deleting the PDF after processing
+      if (filePath) {
+        try {
+          await fs.unlink(filePath);
+        } catch (err) {
+          console.error("Failed to delete local PDF file:", err);
+        }
       }
     }
   }
