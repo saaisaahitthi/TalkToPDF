@@ -17,9 +17,10 @@ export const generateEmbeddings = async (chunks) => {
         config: { outputDimensionality: 768 },
       });
 
-      // console.log(res);
-
       data.push(res.embeddings[0].values);
+
+      // Sleep for 4 seconds to respect Gemini's free tier rate limit (15 RPM)
+      await new Promise((resolve) => setTimeout(resolve, 4000));
     }
 
     return data;
