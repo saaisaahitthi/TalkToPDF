@@ -5,6 +5,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { JOB_TTL } from "../utils/constants.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { redis } from "../config/redis.js";
+import { ingestionQueue } from "../config/queue.js";
 import crypto from "crypto";
 
 const uploadDocument = asyncHandler(async (req, res) => {
@@ -30,13 +31,14 @@ const uploadDocument = asyncHandler(async (req, res) => {
 
   await redis.expire(`job:${jobId}`, JOB_TTL);
 
-  await redis.lpush(
-    "ingestion:queue",
-    JSON.stringify({
-      documentId: document._id,
+  await ingestionQueue.add(
+    "ingestion",
+    {
+      documentId: document._id.toString(),
       filePath: req.file.path,
       jobId,
-    }),
+    },
+    { jobId }
   );
 
   res.status(202).json(
