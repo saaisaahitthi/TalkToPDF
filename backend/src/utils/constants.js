@@ -1,6 +1,6 @@
 export const CHUNK_SIZE = 600;           // characters per chunk
 export const CHUNK_OVERLAP = 100;        // overlap between chunks
-export const EMBEDDING_MODEL = "gemini-embedding-2";  // Gemini embedding model
+export const EMBEDDING_MODEL = "text-embedding-004";  // Gemini embedding model
 export const EMBEDDING_DIMENSIONS = 768; // Gemini text-embedding-004 outputs 768 dims
 export const CHAT_MODEL = "gemini-3.1-flash-lite";         // Gemini chat model (fast + cheap)
 export const MAX_CHUNKS_PER_QUERY = 5;   // top K chunks to retrieve
