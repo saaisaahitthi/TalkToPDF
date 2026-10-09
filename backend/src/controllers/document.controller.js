@@ -15,6 +15,12 @@ const uploadDocument = asyncHandler(async (req, res) => {
     throw new ApiError(400, "PDF is missing");
   }
 
+  // Queue capacity and backpressure: reject if queue is too full
+  const activeJobsCount = await ingestionQueue.getWaitingCount();
+  if (activeJobsCount > 100) {
+    throw new ApiError(503, "System is currently overloaded. Please try again later.");
+  }
+
   const document = await Document.create({
     fileName: req.file.filename,
     originalName: req.file.originalname,
