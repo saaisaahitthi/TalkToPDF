@@ -187,5 +187,16 @@ Visit `http://localhost:5173` in your browser to start interacting!
 
 ---
 
+## 📈 Performance & Queue Capacity
+The application is designed to be highly memory efficient. 
+
+The practical capacity of the ingestion queue depends on:
+- **Available Redis Memory & Eviction Policies**: Your Redis instance controls how many jobs can be queued.
+- **Job Size**: The queued job only contains identifiers (Document ID, Job ID) and a temporary file path, **not** the entire PDF contents. Because each entry is tiny (a few bytes), you can queue tens of thousands of PDFs simultaneously without overwhelming Redis memory.
+- **Worker Consumption**: How quickly the background worker process pulls jobs off the queue compared to how fast users upload PDFs.
+- All heavy data (the extracted text and high-dimensional embeddings) are stored entirely off-queue in MongoDB after processing.
+
+---
+
 ## 📜 License
 This software is provided under the MIT License. Feel free to use, modify, and build your own highly capable RAG pipelines!
